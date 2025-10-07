@@ -1,47 +1,79 @@
 package com.example.inzynierka
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.inzynierka.ui.theme.InzynierkaTheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 
 class MainActivity : ComponentActivity() {
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        auth = Firebase.auth
+
+        // ✅ Check if user is already logged in
+        val user = auth.currentUser
+        if (user == null) {
+            // If not logged in, go to LoginActivity
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish() // prevent going back here before login
+            return
+        }
+
+        // Otherwise, show the main screen
         setContent {
-            InzynierkaTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            WelcomeScreen(auth)
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun WelcomeScreen(auth: FirebaseAuth) {
+    val ctx = LocalContext.current
+    val user = auth.currentUser
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    InzynierkaTheme {
-        Greeting("Android")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "Welcome to FitApp", style = MaterialTheme.typography.h4)
+        Spacer(Modifier.height(16.dp))
+        if (user != null) {
+            Text(text = "Signed in as: ${user.email}")
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = {
+                auth.signOut()
+                Toast.makeText(ctx, "Signed out", Toast.LENGTH_SHORT).show()
+
+                // After sign out, go back to login
+                ctx.startActivity(Intent(ctx, LoginActivity::class.java))
+                (ctx as? ComponentActivity)?.finish()
+            }) {
+                Text("Sign out")
+            }
+        }
     }
 }
