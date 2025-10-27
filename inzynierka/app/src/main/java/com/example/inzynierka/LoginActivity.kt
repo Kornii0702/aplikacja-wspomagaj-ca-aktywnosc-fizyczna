@@ -111,6 +111,8 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
 
         Spacer(Modifier.height(8.dp))
 
+
+        Spacer(Modifier.height(8.dp))
         // 🔹 Register Button
         Button(
             onClick = {
@@ -120,11 +122,34 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
         ) {
             Text("Create Account")
         }
-
+        TextButton(
+            onClick = {
+                if (email.isBlank()) {
+                    Toast.makeText(ctx, "Enter your email to reset password", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    auth.sendPasswordResetEmail(email.trim())
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                Toast.makeText(
+                                    ctx,
+                                    "Password reset email sent. Check your inbox.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                Toast.makeText(
+                                    ctx,
+                                    "Error: ${task.exception?.localizedMessage}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                }
+            }
+        ) {
+            Text("Forgot Password?")
+        }
         Spacer(Modifier.height(8.dp))
 
-        TextButton(onClick = { (ctx as? ComponentActivity)?.finish() }) {
-            Text("Back")
-        }
     }
 }
