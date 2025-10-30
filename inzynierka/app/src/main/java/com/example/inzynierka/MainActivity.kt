@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.example.inzynierka.ui.components.AppTopBar
+import com.example.inzynierka.ui.components.NavItem
 
 class MainActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -41,9 +44,8 @@ class MainActivity : ComponentActivity() {
         }
 
         // Otherwise, show the main screen
-        setContent {
-            WelcomeScreen(auth)
-        }
+        startActivity(Intent(this, HomeActivity::class.java))
+        finish()
     }
 }
 
@@ -51,28 +53,31 @@ class MainActivity : ComponentActivity() {
 fun WelcomeScreen(auth: FirebaseAuth) {
     val ctx = LocalContext.current
     val user = auth.currentUser
+    val displayName =  user?.email?.substringBefore('@') ?: "User"
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Welcome to FitApp", style = MaterialTheme.typography.h4)
-        Spacer(Modifier.height(16.dp))
-        if (user != null) {
-            Text(text = "Signed in as: ${user.email}")
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = {
-                auth.signOut()
-                Toast.makeText(ctx, "Signed out", Toast.LENGTH_SHORT).show()
 
-                // After sign out, go back to login
-                ctx.startActivity(Intent(ctx, LoginActivity::class.java))
-                (ctx as? ComponentActivity)?.finish()
-            }) {
-                Text("Sign out")
+    Scaffold(
+        topBar = { AppTopBar(userName = displayName) } // 👈 Reusable component
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "Welcome to FitApp", style = MaterialTheme.typography.h4)
+            Spacer(Modifier.height(16.dp))
+            if (user != null) {
+                Text(text = "Signed in as: ${user.email}")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = {
+                    auth.signOut()
+                    Toast.makeText(ctx, "Signed out", Toast.LENGTH_SHORT).show()
+                    ctx.startActivity(Intent(ctx, LoginActivity::class.java))
+                    (ctx as? ComponentActivity)?.finish()
+                }) { Text("Sign out") }
             }
         }
     }
