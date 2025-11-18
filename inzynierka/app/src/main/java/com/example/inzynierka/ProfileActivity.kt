@@ -31,9 +31,16 @@ class ProfileActivity : ComponentActivity() {
 
             AppTheme(darkTheme = darkMode) {
                 Scaffold(
-                    topBar = { AppTopBar(userName = "User") },
-                    bottomBar = { BottomNavigationBar(currentRoute = "Profile") }
-                ) { padding ->
+                    topBar = {
+                        AppTopBar(
+                            userName = auth.currentUser?.displayName
+                                ?: auth.currentUser?.email?.substringBefore('@')
+                                ?: "User"
+                        ) },
+                    bottomBar = {
+                        BottomNavigationBar(currentRoute = "Profile") }
+                )
+                { padding ->
                     ProfileScreen(
                         auth = FirebaseAuth.getInstance(),
                         modifier = Modifier.padding(padding)

@@ -93,8 +93,7 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
         // SignIn Button
         Button(
             onClick = {
-                loading = true
-                ctx.startActivity(Intent(ctx, MainActivity::class.java))
+
                 if (email.isBlank() || password.isBlank()) {
                     Toast.makeText(ctx, "Enter email and password", Toast.LENGTH_SHORT).show()
                     loading = false
@@ -105,6 +104,8 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
                     .addOnCompleteListener { task ->
                         loading = false
                         if (task.isSuccessful) {
+                            loading = true
+                            ctx.startActivity(Intent(ctx, MainActivity::class.java))
                             Toast.makeText(ctx, "Signed in", Toast.LENGTH_SHORT).show()
                             onSuccess()
                         } else {
