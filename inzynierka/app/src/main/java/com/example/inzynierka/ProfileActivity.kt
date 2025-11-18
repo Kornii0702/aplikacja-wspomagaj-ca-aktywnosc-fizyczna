@@ -1,18 +1,21 @@
 package com.example.inzynierka
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.inzynierka.ui.components.AppTopBar
 import com.example.inzynierka.ui.components.BottomNavigationBar
+import com.example.inzynierka.ui.theme.AppTheme
+import com.example.inzynierka.ui.theme.ThemeManager
 import com.google.firebase.auth.FirebaseAuth
 
 class ProfileActivity : ComponentActivity() {
@@ -21,12 +24,21 @@ class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         auth = FirebaseAuth.getInstance()
+        ThemeManager.loadTheme(this)
+
         setContent {
-            Scaffold(
-                topBar = { AppTopBar(userName = auth.currentUser?.displayName ?: "User") },
-                bottomBar = { BottomNavigationBar(currentRoute = "Profile") }
-            ) { padding ->
-                ProfileScreen(auth, Modifier.padding(padding))
+            val darkMode by ThemeManager.isDarkMode.collectAsState()
+
+            AppTheme(darkTheme = darkMode) {
+                Scaffold(
+                    topBar = { AppTopBar(userName = "User") },
+                    bottomBar = { BottomNavigationBar(currentRoute = "Profile") }
+                ) { padding ->
+                    ProfileScreen(
+                        auth = FirebaseAuth.getInstance(),
+                        modifier = Modifier.padding(padding)
+                    )
+                }
             }
         }
     }
@@ -34,8 +46,9 @@ class ProfileActivity : ComponentActivity() {
 
 @Composable
 fun ProfileScreen(auth: FirebaseAuth, modifier: Modifier = Modifier) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     val user = auth.currentUser
+    val darkMode by ThemeManager.isDarkMode.collectAsState()
 
     Column(
         modifier = modifier
@@ -44,16 +57,21 @@ fun ProfileScreen(auth: FirebaseAuth, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("👤 Profile Screen", style = MaterialTheme.typography.h5)
+        Text("👤 Profile Screen", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
-        Text("Email: ${user?.email}")
+        Text("Email: ${user?.email ?: "Unknown"}")
         Spacer(Modifier.height(16.dp))
-        Button(onClick = {
-            auth.signOut()
-            Toast.makeText(ctx, "Signed out", Toast.LENGTH_SHORT).show()
-            ctx.startActivity(Intent(ctx, LoginActivity::class.java))
-        }) {
-            Text("Sign out")
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text("Dark Mode")
+            Spacer(Modifier.width(12.dp))
+            Switch(
+                checked = darkMode,
+                onCheckedChange = { ThemeManager.setDarkMode(ctx, it) }
+            )
         }
     }
 }

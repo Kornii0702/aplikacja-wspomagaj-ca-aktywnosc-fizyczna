@@ -26,6 +26,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.example.inzynierka.ui.components.AppTopBar
 import com.example.inzynierka.ui.components.NavItem
+import com.example.inzynierka.ui.theme.ThemeManager
 
 class MainActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
             finish() // prevent going back here before login
             return
         }
+        ThemeManager.loadTheme(this)
 
         // Otherwise, show the main screen
         startActivity(Intent(this, HomeActivity::class.java))

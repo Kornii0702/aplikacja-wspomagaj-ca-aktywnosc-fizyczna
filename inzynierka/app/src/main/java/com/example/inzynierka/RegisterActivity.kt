@@ -1,6 +1,5 @@
 package com.example.inzynierka
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
@@ -23,12 +21,14 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.inzynierka.ui.theme.AppTheme
+import com.example.inzynierka.ui.theme.ThemeManager
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -41,13 +41,22 @@ class RegisterActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
         auth = Firebase.auth
+        ThemeManager.loadTheme(this)
 
         // ✅ Call setContent and show the composable
         setContent {
-            RegisterScreen(auth = auth) {
-                finish() // back to LoginActivity after success
+            val darkMode by ThemeManager.isDarkMode.collectAsState()
+
+            AppTheme(darkTheme = darkMode) {
+                RegisterScreen(
+                    auth = auth,
+                    onSuccess = {
+                        finish() // ✅ Go back to LoginActivity after successful registration
+                    }
+                )
             }
         }
+
     }
 }
 
@@ -81,6 +90,7 @@ fun RegisterScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
             label = { Text("Password") },
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(Modifier.height(12.dp))
 
         Button(
