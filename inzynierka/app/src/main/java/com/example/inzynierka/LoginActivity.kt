@@ -21,6 +21,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -28,12 +29,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.inzynierka.ui.components.AppTopBar
+import com.example.inzynierka.ui.components.BottomNavigationBar
 import com.example.inzynierka.ui.theme.AppTheme
 
 import com.example.inzynierka.ui.theme.ThemeManager
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -42,22 +46,35 @@ class LoginActivity : ComponentActivity() {
         auth = Firebase.auth
         ThemeManager.loadTheme(this)
 
+//        setContent {
+//            val darkMode by ThemeManager.isDarkMode.collectAsState()
+//
+//            AppTheme(darkTheme = darkMode) {
+//                LoginScreen(
+//                    auth = auth,
+//                    onSuccess = {
+//                        finish() // Close LoginActivity after successful login
+//                    }
+//                )
+//            }
+//        }
         setContent {
             val darkMode by ThemeManager.isDarkMode.collectAsState()
 
             AppTheme(darkTheme = darkMode) {
-                LoginScreen(
-                    auth = auth,
-                    onSuccess = {
-                        finish() // Close LoginActivity after successful login
-                    }
-                )
+                    LoginScreen(
+                        auth = auth,
+                        onSuccess = {
+                            finish() // Close LoginActivity after successful login
+                        }
+                    )
+                }
             }
         }
 
 
     }
-}
+
 
 
 @Composable
