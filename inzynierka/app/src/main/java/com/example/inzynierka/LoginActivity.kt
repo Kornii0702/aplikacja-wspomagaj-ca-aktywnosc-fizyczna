@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,27 +21,60 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.inzynierka.ui.components.AppTopBar
+import com.example.inzynierka.ui.components.BottomNavigationBar
+import com.example.inzynierka.ui.theme.AppTheme
+
+import com.example.inzynierka.ui.theme.ThemeManager
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         auth = Firebase.auth
-        setContent { LoginScreen(auth = auth, onSuccess = {
-            finish() // return to MainActivity
-        }) }
+        ThemeManager.loadTheme(this)
+
+//        setContent {
+//            val darkMode by ThemeManager.isDarkMode.collectAsState()
+//
+//            AppTheme(darkTheme = darkMode) {
+//                LoginScreen(
+//                    auth = auth,
+//                    onSuccess = {
+//                        finish() // Close LoginActivity after successful login
+//                    }
+//                )
+//            }
+//        }
+        setContent {
+            val darkMode by ThemeManager.isDarkMode.collectAsState()
+
+            AppTheme(darkTheme = darkMode) {
+                    LoginScreen(
+                        auth = auth,
+                        onSuccess = {
+                            finish() // Close LoginActivity after successful login
+                        }
+                    )
+                }
+            }
+        }
+
+
     }
-}
+
 
 
 @Composable
@@ -75,11 +107,10 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
 
-        // 🔹 Sign In Button
+        // SignIn Button
         Button(
             onClick = {
-                loading = true
-                ctx.startActivity(Intent(ctx, MainActivity::class.java))
+
                 if (email.isBlank() || password.isBlank()) {
                     Toast.makeText(ctx, "Enter email and password", Toast.LENGTH_SHORT).show()
                     loading = false
@@ -90,6 +121,8 @@ fun LoginScreen(auth: FirebaseAuth, onSuccess: () -> Unit) {
                     .addOnCompleteListener { task ->
                         loading = false
                         if (task.isSuccessful) {
+                            loading = true
+                            ctx.startActivity(Intent(ctx, MainActivity::class.java))
                             Toast.makeText(ctx, "Signed in", Toast.LENGTH_SHORT).show()
                             onSuccess()
                         } else {
