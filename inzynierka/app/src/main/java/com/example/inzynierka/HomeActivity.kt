@@ -215,6 +215,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.example.inzynierka.ui.theme.NoteItem
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -265,7 +266,7 @@ fun HomeScreen(auth: FirebaseAuth, db: FirebaseFirestore, modifier: Modifier = M
     val user = auth.currentUser ?: return
 
     var noteText by remember { mutableStateOf("") }
-    var notesList by remember { mutableStateOf(listOf<String>()) }
+    var notesList by remember { mutableStateOf(listOf<NoteItem>()) }
 
     // Load notes when screen opens
     DisposableEffect(Unit) {
@@ -275,7 +276,10 @@ fun HomeScreen(auth: FirebaseAuth, db: FirebaseFirestore, modifier: Modifier = M
             .orderBy("timestamp")
             .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null) {
-                    notesList = snapshot.documents.mapNotNull { it.getString("text") }
+                   notesList = snapshot.documents.mapNotNull { doc ->
+                   val text = doc.getString("text")
+                   if (text != null) NoteItem(id = doc.id, text = text) else null
+                   }
                 }
             }
         onDispose { listener.remove() }
@@ -292,6 +296,9 @@ fun HomeScreen(auth: FirebaseAuth, db: FirebaseFirestore, modifier: Modifier = M
         Text(
             text = "🏠 Home Screen",
             style = MaterialTheme.typography.headlineSmall
+        )
+        Text(
+            text = notesList.size.toString()
         )
 
         Spacer(Modifier.height(16.dp))
@@ -326,9 +333,9 @@ fun HomeScreen(auth: FirebaseAuth, db: FirebaseFirestore, modifier: Modifier = M
             Button(
                 onClick = {
                     if (noteText.isNotBlank()) {
-                        addNoteForUser(db, user.uid, noteText) {
-                            notesList = notesList + noteText
+                        addNoteForUser(db, user.uid, noteText) { newNote ->
                             noteText = ""
+
                         }
                     }
                 }
@@ -351,22 +358,55 @@ fun HomeScreen(auth: FirebaseAuth, db: FirebaseFirestore, modifier: Modifier = M
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = note,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = note.text,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Button(
+                            onClick = {
+                                deleteNoteForUser(db, user.uid, note.id) {
+                                    notesList = notesList.filterNot { it.id == note.id }
+                                }
+                            }
+                        ) {
+                            Text("delete")
+                        }
+                    }
                 }
             }
         }
     }
-
 }
+    private fun deleteNoteForUser(
+    db: FirebaseFirestore,
+    userId: String,
+    noteId: String,
+    onComplete: () -> Unit
+) {
+    db.collection("users")
+        .document(userId)
+        .collection("notes")
+        .document(noteId)
+        .delete()
+        .addOnSuccessListener { onComplete() }
+        .addOnFailureListener { exception ->  exception.printStackTrace() }
+}
+
+
 private fun addNoteForUser(
     db: FirebaseFirestore,
     userId: String,
     text: String,
-    onComplete: () -> Unit
+    onComplete: (NoteItem) -> Unit // ✅ now lambda accepts a NoteItem
 ) {
     val noteData = hashMapOf(
         "text" to text,
@@ -377,25 +417,9 @@ private fun addNoteForUser(
         .document(userId)
         .collection("notes")
         .add(noteData)
-        .addOnSuccessListener { onComplete() }
+        .addOnSuccessListener { doc ->
+            onComplete(NoteItem(id = doc.id, text = text))
+        }
 }
 
-// 🔹 Load existing notes
-private suspend fun loadNotesForUser(
-    db: FirebaseFirestore,
-    userId: String
-): List<String> {
-    return try {
-        val snapshot = db.collection("users")
-            .document(userId)
-            .collection("notes")
-            .orderBy("timestamp")
-            .get()
-            .await()
-
-        snapshot.documents.mapNotNull { it.getString("text") }
-    } catch (e: Exception) {
-        emptyList()
-    }
-}
 
