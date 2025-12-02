@@ -31,8 +31,17 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Date
+import java.util.UUID
+
+
 
 class RecordActivity : ComponentActivity() {
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -129,11 +138,18 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val user = auth.currentUser
+
     // For tracking user path
     val routeLine = remember { Polyline().apply { color = android.graphics.Color.RED; width = 8f } }
     var trackingJob by remember { mutableStateOf<Job?>(null) }
 
-    // Add the route line to the map
+    val trackedPoints = remember { mutableStateListOf<GeoPoint>() }
+    var startTime by remember { mutableStateOf<Date?>(null) }
+    var endTime by remember { mutableStateOf<Date?>(null) }
+
     LaunchedEffect(Unit) {
         mapView.overlays.add(routeLine)
     }
@@ -162,10 +178,13 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Start tracking
+
+                // 🟢 Start tracking
                 Button(onClick = {
                     if (!isRunning) {
                         isRunning = true
+                        startTime = Date()
+
                         // Start timer
                         scope.launch {
                             while (isRunning) {
@@ -173,6 +192,7 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
                                 timeInSeconds++
                             }
                         }
+
                         // Start tracking location
                         trackingJob = scope.launch {
                             val provider = GpsMyLocationProvider(context)
@@ -183,6 +203,7 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
                                 val loc = overlay.myLocation
                                 if (loc != null) {
                                     val point = GeoPoint(loc.latitude, loc.longitude)
+                                    trackedPoints.add(point)
                                     routeLine.addPoint(point)
                                     mapView.invalidate()
                                 }
@@ -192,17 +213,19 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
                     }
                 }) { Text("Start") }
 
-                // Stop tracking
+                // 🔴 Stop tracking
                 Button(onClick = {
                     isRunning = false
+                    endTime = Date()
                     trackingJob?.cancel()
                 }) { Text("Stop") }
 
-                // Reset timer + route
+                // 🔄 Reset
                 Button(onClick = {
                     isRunning = false
                     timeInSeconds = 0
                     trackingJob?.cancel()
+                    trackedPoints.clear()
                     routeLine.setPoints(emptyList())
                     mapView.invalidate()
                 }) { Text("Reset") }
@@ -210,9 +233,42 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
 
             Spacer(Modifier.height(24.dp))
 
+            // ✅ Save to Firestore
             TextButton(onClick = {
                 isRunning = false
                 trackingJob?.cancel()
+                endTime = Date()
+
+                if (user != null && trackedPoints.isNotEmpty()) {
+                    val userId = user.uid
+                    val activityId = UUID.randomUUID().toString()
+
+                    // Calculate total distance (simple sum of segment distances)
+                    val distanceMeters = calculateTotalDistance(trackedPoints)
+                    val avgPace = if (distanceMeters > 0) timeInSeconds / (distanceMeters / 1000) else 0.0
+
+                    val activityData = hashMapOf(
+                        "startTime" to startTime,
+                        "endTime" to endTime,
+                        "durationSeconds" to timeInSeconds,
+                        "distanceMeters" to distanceMeters,
+                        "averagePace" to avgPace,
+                        "route" to trackedPoints.map { mapOf("lat" to it.latitude, "lng" to it.longitude) }
+                    )
+
+                    db.collection("users")
+                        .document(userId)
+                        .collection("activities")
+                        .document(activityId)
+                        .set(activityData)
+                        .addOnSuccessListener {
+                            println("✅ Activity saved to Firestore")
+                        }
+                        .addOnFailureListener {
+                            println(" Failed to save activity: ${it.message}")
+                        }
+                }
+
                 onClose()
             }) {
                 Text("End Activity", color = MaterialTheme.colorScheme.primary)
@@ -221,8 +277,17 @@ fun TimerOverlay(mapView: MapView, onClose: () -> Unit) {
     }
 }
 
+
 private fun formatTime(seconds: Long): String {
     val minutes = seconds / 60
     val sec = seconds % 60
     return String.format("%02d:%02d", minutes, sec)
+}
+
+private fun calculateTotalDistance(points: List<GeoPoint>): Double {
+    var total = 0.0
+    for (i in 1 until points.size) {
+        total += points[i - 1].distanceToAsDouble(points[i])
+    }
+    return total
 }
